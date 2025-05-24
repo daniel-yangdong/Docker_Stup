@@ -1,1 +1,185 @@
 
+1、错误描述
+root@ubuntu-database:/opt/dify/docker# docker compose up -d
+[+] Running 9/9
+ ✘ api Error        context canceled                                                                                                                                                                            15.1s 
+ ✘ db Error         context canceled                                                                                                                                                                            15.1s 
+ ✘ nginx Error      context canceled                                                                                                                                                                            15.1s 
+ ✘ redis Error      Get "https://registry-1.docker.io/v2/": context deadline exceeded (Client.Timeout exceeded while awaiting headers)                                                                          15.1s 
+ ✘ ssrf_proxy Error context canceled                                                                                                                                                                            15.1s 
+ ✘ worker Error     context canceled                                                                                                                                                                            15.1s 
+ ✘ weaviate Error   context canceled                                                                                                                                                                            15.1s 
+ ✘ sandbox Error    context canceled                                                                                                                                                                            15.1s 
+ ✘ web Error        context canceled                                                                                                                                                                            15.1s 
+Error response from daemon: Get "https://registry-1.docker.io/v2/": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+        Error response from daemon: Get "https://registry-1.docker.io/v2/": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+
+        这个错误表明Docker客户端尝试访问Docker Hub或其他Docker注册中心时出现了问题。具体来说，是在尝试获取注册中心API的响应时遇到了错误。可能的原因包括网络问题、认证问题、注册中心URL不正确或者注册中心服务本身不可用。
+
+2、解决方法
+2.1、检查网络连接
+        确保你的机器可以访问互联网，特别是Docker Hub或你所使用的私有注册中心。        
+
+root@ubuntu-database:/opt/dify/docker# ping www.baidu.com
+PING www.a.shifen.com (110.242.68.3) 56(84) bytes of data.
+64 bytes from 110.242.68.3: icmp_seq=1 ttl=128 time=38.5 ms
+64 bytes from 110.242.68.3: icmp_seq=2 ttl=128 time=36.4 ms
+64 bytes from 110.242.68.3: icmp_seq=3 ttl=128 time=52.3 ms
+2.2、检查Docker服务状态
+        运行systemctl status docker（Linux系统）查看Docker服务是否正在运行。
+
+root@ubuntu-database:/opt/dify/docker# systemctl status docker
+● docker.service - Docker Application Container Engine
+     Loaded: loaded (/usr/lib/systemd/system/docker.service; enabled; preset: enabled)
+     Active: active (running) since Wed 2024-11-27 12:04:05 UTC; 55min ago
+TriggeredBy: ● docker.socket
+       Docs: https://docs.docker.com
+   Main PID: 4766 (dockerd)
+      Tasks: 10
+     Memory: 21.8M (peak: 24.5M)
+        CPU: 479ms
+     CGroup: /system.slice/docker.service
+如以上都没有问题，下面考虑docker换源
+2.3、换源
+sudo mkdir -p /etc/docker
+vim /etc/docker/daemon.json  
+首先进入/etc/docker/daemon.json文件
+
+然后在里面加入下面的配置
+
+{
+  "registry-mirrors" : ["https://docker.registry.cyou",
+"https://docker-cf.registry.cyou",
+"https://dockercf.jsdelivr.fyi",
+"https://docker.jsdelivr.fyi",
+"https://dockertest.jsdelivr.fyi",
+"https://mirror.aliyuncs.com",
+"https://dockerproxy.com",
+"https://mirror.baidubce.com",
+"https://docker.m.daocloud.io",
+"https://docker.nju.edu.cn",
+"https://docker.mirrors.sjtug.sjtu.edu.cn",
+"https://docker.mirrors.ustc.edu.cn",
+"https://mirror.iscas.ac.cn",
+"https://docker.rainbond.cc",
+"https://do.nark.eu.org",
+"https://dc.j8.work",
+"https://dockerproxy.com",
+"https://gst6rzl9.mirror.aliyuncs.com",
+"https://registry.docker-cn.com",
+"http://hub-mirror.c.163.com",
+"http://mirrors.ustc.edu.cn/",
+"https://mirrors.tuna.tsinghua.edu.cn/",
+"http://mirrors.sohu.com/" 
+],
+ "insecure-registries" : [
+    "registry.docker-cn.com",
+    "docker.mirrors.ustc.edu.cn"
+    ],
+"debug": true,
+"experimental": false
+}
+重载生效
+
+sudo systemctl daemon-reload
+重启服务
+
+sudo systemctl restart docker
+查看是否配置成功
+
+docker info
+root@ubuntu-database:/etc/docker# docker info
+Client: Docker Engine - Community
+ Version:    27.3.1
+ Context:    default
+ Debug Mode: false
+ Plugins:
+  buildx: Docker Buildx (Docker Inc.)
+    Version:  v0.17.1
+    Path:     /usr/libexec/docker/cli-plugins/docker-buildx
+  compose: Docker Compose (Docker Inc.)
+    Version:  v2.29.7
+    Path:     /usr/libexec/docker/cli-plugins/docker-compose
+ 
+Server:
+ Containers: 0
+  Running: 0
+  Paused: 0
+  Stopped: 0
+ Images: 0
+ Server Version: 27.3.1
+ Storage Driver: overlay2
+  Backing Filesystem: extfs
+  Supports d_type: true
+  Using metacopy: false
+  Native Overlay Diff: true
+  userxattr: false
+ Logging Driver: json-file
+ Cgroup Driver: systemd
+ Cgroup Version: 2
+ Plugins:
+  Volume: local
+  Network: bridge host ipvlan macvlan null overlay
+  Log: awslogs fluentd gcplogs gelf journald json-file local splunk syslog
+ Swarm: inactive
+ Runtimes: io.containerd.runc.v2 runc
+ Default Runtime: runc
+ Init Binary: docker-init
+ containerd version: 57f17b0a6295a39009d861b89e3b3b87b005ca27
+ runc version: v1.1.14-0-g2c9f560
+ init version: de40ad0
+ Security Options:
+  apparmor
+  seccomp
+   Profile: builtin
+  cgroupns
+ Kernel Version: 6.8.0-49-generic
+ Operating System: Ubuntu 24.04 LTS
+ OSType: linux
+ Architecture: x86_64
+ CPUs: 4
+ Total Memory: 7.709GiB
+ Name: ubuntu-database
+ ID: acb5a888-7140-4e43-8924-6fc325481944
+ Docker Root Dir: /var/lib/docker
+ Debug Mode: true
+  File Descriptors: 23
+  Goroutines: 40
+  System Time: 2024-11-27T13:09:10.861401847Z
+  EventsListeners: 0
+ Experimental: false
+ Insecure Registries:
+  docker.mirrors.ustc.edu.cn
+  registry.docker-cn.com
+  127.0.0.0/8
+ Registry Mirrors:
+  https://docker.registry.cyou/
+  https://docker-cf.registry.cyou/
+  https://dockercf.jsdelivr.fyi/
+  https://docker.jsdelivr.fyi/
+  https://dockertest.jsdelivr.fyi/
+  https://mirror.aliyuncs.com/
+  https://dockerproxy.com/
+  https://mirror.baidubce.com/
+  https://docker.m.daocloud.io/
+  https://docker.nju.edu.cn/
+  https://docker.mirrors.sjtug.sjtu.edu.cn/
+  https://docker.mirrors.ustc.edu.cn/
+  https://mirror.iscas.ac.cn/
+  https://docker.rainbond.cc/
+  https://do.nark.eu.org/
+  https://dc.j8.work/
+  https://gst6rzl9.mirror.aliyuncs.com/
+  https://registry.docker-cn.com/
+  http://hub-mirror.c.163.com/
+  http://mirrors.ustc.edu.cn/
+  https://mirrors.tuna.tsinghua.edu.cn/
+  http://mirrors.sohu.com/
+ Live Restore Enabled: false
+ 
+WARNING: bridge-nf-call-iptables is disabled
+WARNING: bridge-nf-call-ip6tables is disabled
+
+
+
+重新执行 ：docker compose up -d
